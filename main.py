@@ -387,8 +387,8 @@ def plot_trend(country_name, series, label, units):
         years.append(year)
         values.append(value)
 
-    fig, ax = plt.subplots()
-    plt.subplots_adjust(bottom=0.25)  # leave room for sliders
+    fig, ax = plt.subplots(figsize=(12, 6))
+    plt.subplots_adjust(left=0.10, bottom=0.25)  # leave room for sliders
     line, = ax.plot(years, values, marker="o")
 
     # Pick a readable scale for the y-axis ticks based on the data's size
@@ -402,7 +402,7 @@ def plot_trend(country_name, series, label, units):
     else:
         divisor, suffix = 1e3, "K"
     ax.yaxis.set_major_formatter(
-        FuncFormatter(lambda x, _: f"{x/divisor:.1f}{suffix}")
+        FuncFormatter(lambda x, _: f"{x/divisor:.4g}{suffix}")
     )
 
     ax.set_title(f"{label} Trend — {country_name}")
@@ -430,10 +430,12 @@ def plot_trend(country_name, series, label, units):
     start_slider.on_changed(update)
     end_slider.on_changed(update)
 
+    def on_hover(sel):
+        """Format the hover label with the year and exact value."""
+        sel.annotation.set_text(f"{int(sel.target[0])}: {sel.target[1]:,.0f}")
+
     cursor = mplcursors.cursor(line, hover=True)
-    cursor.connect("add", lambda sel: sel.annotation.set_text(
-        f"{int(sel.target[0])}: {sel.target[1]:,.0f}"
-    ))
+    cursor.connect("add", on_hover)
 
     plt.show()
 
