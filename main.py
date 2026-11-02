@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+from matplotlib.ticker import FuncFormatter
 import mplcursors
 
 load_dotenv()  # reads MY_API_KEY from a local .env file, if one exists
@@ -372,10 +373,9 @@ def display_population_growth(country):
 # ---------------------------------------------------------------------------
 
 def plot_trend(country_name, series, label, units):
-    """Render a line chart for a time series, with hover annotations
-    date range slider (matplotlib.widgets.Slider) to re-slice
-    the visible years, and hover annotations
-    (mplcursors) showing the exact value at a given point."""
+    """Render a line chart for a time series, with two sliders
+    (matplotlib.widgets.Slider) to re-slice the visible years and
+    hover annotations (mplcursors) showing the exact value at a point."""
     points = [(p["year"], p["value"]) for p in series if p["value"] is not None]
     if not points:
         print(f"No data available to plot for {label} in {country_name}.")
@@ -390,18 +390,32 @@ def plot_trend(country_name, series, label, units):
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.25)  # leave room for sliders
     line, = ax.plot(years, values, marker="o")
+
+    # Pick a readable scale for the y-axis ticks based on the data's size
+    biggest = max(values)
+    if biggest >= 1e12:
+        divisor, suffix = 1e12, "T"
+    elif biggest >= 1e9:
+        divisor, suffix = 1e9, "B"
+    elif biggest >= 1e6:
+        divisor, suffix = 1e6, "M"
+    else:
+        divisor, suffix = 1e3, "K"
+    ax.yaxis.set_major_formatter(
+        FuncFormatter(lambda x, _: f"{x/divisor:.1f}{suffix}")
+    )
+
     ax.set_title(f"{label} Trend — {country_name}")
     ax.set_xlabel("Year")
     ax.set_ylabel(f"{label} ({units})")
-        # Two plain Sliders (rather than a single RangeSlider) so both ends of
+
+    # Two plain Sliders (rather than a single RangeSlider) so both ends of
     # the visible range are independently adjustable using the native
     # matplotlib.widgets.Slider widget called for in the spec.
     start_axis = plt.axes([0.15, 0.12, 0.7, 0.03])
     end_axis = plt.axes([0.15, 0.05, 0.7, 0.03])
     start_slider = Slider(start_axis, "Start year", years[0], years[-1], valinit=years[0], valstep=1)
     end_slider = Slider(end_axis, "End year", years[0], years[-1], valinit=years[-1], valstep=1)
-
-    #plt.show()
 
     def update(_):
         """Called automatically by matplotlib whenever a slider moves.
@@ -419,15 +433,9 @@ def plot_trend(country_name, series, label, units):
     cursor = mplcursors.cursor(line, hover=True)
     cursor.connect("add", lambda sel: sel.annotation.set_text(
         f"{int(sel.target[0])}: {sel.target[1]:,.0f}"
-        ))
-
-    cursor = mplcursors.cursor(line, hover=True)
-    cursor.connect("add", lambda sel: sel.annotation.set_text(
-        f"{int(sel.target[0])}: {sel.target[1]:,.0f}"
     ))
 
     plt.show()
-
 
 def get_trend_indicator_choice():
     options = {
